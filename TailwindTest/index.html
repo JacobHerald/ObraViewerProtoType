@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Table with Google Maps</title>
+    <!-- TailwindCSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PapaParse CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <!-- Google Maps API (replace YOUR_API_KEY with your actual API key) -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBejGr1MxdFRi4NBaQ4FpV9tDAxo3jsV5I&libraries=places"></script>
+</head>
+<body class="transition-colors duration-300 dark:bg-orange-950 dark:text-white">
+    <div class="bg-orange-200 p-2 dark:bg-white/10">
+    <div class = "rounded-xl bg-orange-100 dark:bg-neutral-900 p-10">
+        <img src="logo.png" class="mb-10 h-6 dark:hidden" alt="ObraViewer" />
+        <img src="logo-dark.png" class="mb-10 h-6 hidden dark:block" alt="ObraViewer" />
+        <p class="mb-10 h-6">A custom-made, handcrafted interactive database built with the power of JavaScript, React, TailwindCSS, and Python. Features include:</p>
+        <ul class="space-y-3">
+            <li class="flex items-start">
+              <svg class="size-6 shrink-0" fill="none" stroke-linecap="square">
+                <circle cx="11" cy="11" r="11" class="fill-orange-400/25" />
+                <circle cx="11" cy="11" r="10.5" class="stroke-orange-400/25" />
+                <path d="M8 11.5L10.5 14L14 8" class="stroke-orange-800 dark:stroke-orange-300" />
+              </svg>
+              <p class="ml-3">
+                Ability to search for key data via columns.
+              </p>
+            </li>
+            <li class="flex items-start">
+              <svg class="size-6 shrink-0" fill="none" stroke-linecap="square">
+                <circle cx="11" cy="11" r="11" class="fill-orange-400/25" />
+                <circle cx="11" cy="11" r="10.5" class="stroke-orange-400/25" />
+                <path d="M8 11.5L10.5 14L14 8" class="stroke-orange-800 dark:stroke-orange-300" />
+              </svg>
+              <p class="ml-3">
+                Automatically updating GoogleMaps visualization.
+              </p>
+            </li>
+            <li class="flex items-start">
+              <svg class="size-6 shrink-0" fill="none" stroke-linecap="square">
+                <circle cx="11" cy="11" r="11" class="fill-orange-400/25" />
+                <circle cx="11" cy="11" r="10.5" class="stroke-orange-400/25" />
+                <path d="M8 11.5L10.5 14L14 8" class="stroke-orange-800 dark:stroke-orange-300" />
+              </svg>
+              <p class="ml-3">
+                Companion Automated WebScraper app powered by Python and Pandas.
+              </p>
+            </li>
+          </ul>
+          <p class="mb-10 h-2"></p>
+          <p class="mb-20 h-6">Fullstack development allows level of customizability to achieve research goals that third-party software cannot provide. 
+            TailwindCSS allows the creations of beautiful Web Apps while Python enables automated data gathering to ensure up to date, accurate information is constantly
+        brought into the database. JavaScript + React powers the backend of the scripts, while Google Maps API gives visualization to Python gathered data.
+    This Web App even has a dark mode! Try it out by changing your system settings to dark or light mode to view automated theme switching.
+Many, many features can and will be implemented to create a robust, powerful database that is responsive to user feedback in a way not possible with third party software. </p>
+<p class="mb-10 h-6">Brought to you proudly by <strong>Jacob Herald.</strong></p>
+<!-- Google Maps integration -->
+    <div id="map" class="mb-6" style="height: 400px; width: 100%;"></div>
+
+    <div class="mb-4 flex items-center">
+        <!-- Search input for filtering rows -->
+        <div class="mr-4 flex-grow">
+            <input type="text" id="search" class="mt-2 p-4 border border-black rounded w-full dark:bg-orange-950 dark:border-orange-500 dark:text-white" placeholder="Search database...">
+        </div>
+
+        <!-- Column selection for search -->
+        <div class="flex-shrink">
+            <select id="column-select" class="mt-2 p-4 border border-black rounded dark:bg-orange-950 dark:border-orange-500 dark:text-white">
+                <option value="0">Date</option>
+                <option value="1">Location</option>
+                <option value="2">Work</option>
+                <option value="3">Reference</option>
+                <option value="4">Company/People</option>
+                <option value="5">URL</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Table for displaying CSV data -->
+    <div class="overflow-x-auto">
+        <table class="min-w-full table-auto bg-white border border-black dark:bg-orange-950 dark:border-orange-600">
+            <thead>
+                <tr class="bg-orange-300 dark:bg-orange-950">
+                    <th class="px-4 py-2 border border-black dark:border-orange-500">Date</th>
+                    <th class="px-4 py-2 border border-black dark:border-orange-500">Location</th>
+                    <th class="px-4 py-2 border border-black dark:border-orange-500">Work</th>
+                    <th class="px-4 py-2 border border-black dark:border-orange-500">Reference</th>
+                    <th class="px-4 py-2 border border-black dark:border-orange-500">Company/People</th>
+                    <th class="px-4 py-2 border border-black dark:border-orange-500">URL</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                <!-- Rows will be populated here by JavaScript -->
+            </tbody>
+        </table>
+    </div>
+</div>
+</div>
+    <!-- JavaScript to handle CSV file reading, Google Maps, search, and table population -->
+    <script>
+        let csvData = [];
+        let map;
+        let geocoder;
+        let markers = [];
+
+        // Initialize Google Maps and Geocoder
+        function initMap() {
+            map = new google.maps.Map(document.getElementById("map"), {
+                zoom: 3,
+                center: { lat: 20.0, lng: 0.0 }, // Centered globally for broad view
+                restriction: {
+                    latLngBounds: {
+                        north: 85,
+                        south: -85,
+                        east: 180,
+                        west: -180
+                    },
+                    strictBounds: true
+                },
+                gestureHandling: 'greedy',
+                noWrap: true,
+            });
+            geocoder = new google.maps.Geocoder();
+
+            fetch('output.csv')
+                .then(response => response.text())
+                .then(data => {
+                    const parsedData = Papa.parse(data, {
+                        header: false,
+                        skipEmptyLines: true
+                    });
+
+                    csvData = parsedData.data;
+                    displayTable(csvData);
+                    addMarkers(csvData);
+                })
+                .catch(error => {
+                    console.error('Error loading the CSV file:', error);
+                });
+        }
+
+        // Function to display the table with the CSV data
+        function displayTable(data) {
+            const tableBody = document.getElementById('table-body');
+            tableBody.innerHTML = '';
+
+            data.forEach(row => {
+                if (row.length >= 6) {
+                    const tr = document.createElement('tr');
+                    row.slice(0, 6).forEach(cell => {
+                        const td = document.createElement('td');
+                        td.classList.add('px-4', 'py-2', 'border', 'border-orange-950', 'dark:border-orange-500');
+                        td.textContent = cell;
+                        tr.appendChild(td);
+                    });
+                    tableBody.appendChild(tr);
+                }
+            });
+        }
+
+        // Function to add markers to the Google map based on the second column (location)
+        function addMarkers(data) {
+            markers.forEach(marker => marker.setMap(null));
+            markers = [];
+
+            const locationsData = {};
+
+            data.forEach(row => {
+                const location = row[1];
+
+                if (location) {
+                    if (!locationsData[location]) {
+                        locationsData[location] = [];
+                    }
+                    locationsData[location].push(row);
+
+                    geocodeAddress(location, (latLng) => {
+                        const marker = new google.maps.Marker({
+                            position: latLng,
+                            map: map,
+                            title: location,
+                        });
+
+                        markers.push(marker);
+
+                        let tableContent = '<table class="w-full border-collapse border border-black dark:bg-orange-200">';
+                        tableContent += '<thead><tr>';
+                        tableContent += '<th style="border: 1px solid black; padding: 5px;">Date</th>';
+                        tableContent += '<th style="border: 1px solid black; padding: 5px;">Location</th>';
+                        tableContent += '<th style="border: 1px solid black; padding: 5px;">Work</th>';
+                        tableContent += '<th style="border: 1px solid black; padding: 5px;">Reference</th>';
+                        tableContent += '<th style="border: 1px solid black; padding: 5px;">Company/People</th>';
+                        tableContent += '<th style="border: 1px solid black; padding: 5px;">URL</th>';
+                        tableContent += '</tr></thead><tbody>';
+
+                        locationsData[location].forEach(row => {
+                            tableContent += '<tr>';
+                            row.forEach(cell => {
+                                tableContent += `<td style="border: 1px solid black; padding: 5px;">${cell}</td>`;
+                            });
+                            tableContent += '</tr>';
+                        });
+
+                        tableContent += '</tbody></table>';
+
+                        const infoWindow = new google.maps.InfoWindow({
+                            content: `<div class="${document.documentElement.classList.contains('dark') ? 'dark:bg-gray-700 dark:text-white' : 'bg-white text-black'}"><strong>${location}</strong><br>${tableContent}</div>`
+                        });
+
+
+                        marker.addListener('click', function() {
+                            infoWindow.open(map, marker);
+                        });
+                    });
+                }
+            });
+        }
+
+        // Function to geocode an address and add a marker at the location
+        function geocodeAddress(address, callback) {
+            geocoder.geocode({ address: address }, function(results, status) {
+                if (status === "OK") {
+                    callback(results[0].geometry.location);
+                } else {
+                    console.error("Geocode was not successful for the following reason: " + status);
+                }
+            });
+        }
+
+        // Function to filter the table and markers based on search input and selected column
+        document.getElementById('search').addEventListener('input', function(event) {
+            const searchTerm = event.target.value.toLowerCase();
+            const columnIndex = document.getElementById('column-select').value;
+
+            const filteredData = csvData.filter(row => {
+                return row[columnIndex].toLowerCase().includes(searchTerm);
+            });
+
+            displayTable(filteredData); // Update the table with filtered data
+            addMarkers(filteredData);    // Update the map with filtered markers
+        });
+
+        window.onload = initMap;
+    </script>
+
+</body>
+</html>
