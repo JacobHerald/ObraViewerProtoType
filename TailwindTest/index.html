@@ -124,7 +124,7 @@ Many, many features can and will be implemented to create a robust, powerful dat
             });
             geocoder = new google.maps.Geocoder();
 
-            fetch('/public/output.csv')
+            fetch('output.csv')
                 .then(response => response.text())
                 .then(data => {
                     const parsedData = Papa.parse(data, {
@@ -162,61 +162,69 @@ Many, many features can and will be implemented to create a robust, powerful dat
 
         // Function to add markers to the Google map based on the second column (location)
         function addMarkers(data) {
-            markers.forEach(marker => marker.setMap(null));
-            markers = [];
+    markers.forEach(marker => marker.setMap(null)); // Remove existing markers
+    markers = [];
 
-            const locationsData = {};
+    const locationsData = {};
 
-            data.forEach(row => {
-                const location = row[1];
+    data.forEach(row => {
+        const location = row[1];
 
-                if (location) {
-                    if (!locationsData[location]) {
-                        locationsData[location] = [];
-                    }
-                    locationsData[location].push(row);
-
-                    geocodeAddress(location, (latLng) => {
-                        const marker = new google.maps.Marker({
-                            position: latLng,
-                            map: map,
-                            title: location,
-                        });
-
-                        markers.push(marker);
-
-                        let tableContent = '<table class="w-full border-collapse border border-black dark:bg-orange-200">';
-                        tableContent += '<thead><tr>';
-                        tableContent += '<th style="border: 1px solid black; padding: 5px;">Date</th>';
-                        tableContent += '<th style="border: 1px solid black; padding: 5px;">Location</th>';
-                        tableContent += '<th style="border: 1px solid black; padding: 5px;">Work</th>';
-                        tableContent += '<th style="border: 1px solid black; padding: 5px;">Reference</th>';
-                        tableContent += '<th style="border: 1px solid black; padding: 5px;">Company/People</th>';
-                        tableContent += '<th style="border: 1px solid black; padding: 5px;">URL</th>';
-                        tableContent += '</tr></thead><tbody>';
-
-                        locationsData[location].forEach(row => {
-                            tableContent += '<tr>';
-                            row.forEach(cell => {
-                                tableContent += `<td style="border: 1px solid black; padding: 5px;">${cell}</td>`;
-                            });
-                            tableContent += '</tr>';
-                        });
-
-                        tableContent += '</tbody></table>';
-
-                        const infoWindow = new google.maps.InfoWindow({
-                            content: `<div class="${document.documentElement.classList.contains('dark') ? 'dark:bg-gray-700 dark:text-white' : 'bg-white text-black'}"><strong>${location}</strong><br>${tableContent}</div>`
-                        });
-
-
-                        marker.addListener('click', function() {
-                            infoWindow.open(map, marker);
-                        });
-                    });
-                }
-            });
+        if (location) {
+            if (!locationsData[location]) {
+                locationsData[location] = [];
+            }
+            locationsData[location].push(row);
         }
+    });
+
+    // Now create a marker for each unique location
+    Object.keys(locationsData).forEach(location => {
+        geocodeAddress(location, (latLng) => {
+            const existingMarker = markers.find(marker => marker.getPosition().equals(latLng));
+
+            // Only create a new marker if one doesn't already exist at this position
+            if (!existingMarker) {
+                const marker = new google.maps.Marker({
+                    position: latLng,
+                    map: map,
+                    title: location,
+                });
+
+                markers.push(marker);
+
+                let tableContent = '<table class="w-full border-collapse border border-black dark:bg-orange-200">';
+                tableContent += '<thead><tr>';
+                tableContent += '<th style="border: 1px solid black; padding: 5px;">Date</th>';
+                tableContent += '<th style="border: 1px solid black; padding: 5px;">Location</th>';
+                tableContent += '<th style="border: 1px solid black; padding: 5px;">Work</th>';
+                tableContent += '<th style="border: 1px solid black; padding: 5px;">Reference</th>';
+                tableContent += '<th style="border: 1px solid black; padding: 5px;">Company/People</th>';
+                tableContent += '<th style="border: 1px solid black; padding: 5px;">URL</th>';
+                tableContent += '</tr></thead><tbody>';
+
+                locationsData[location].forEach(row => {
+                    tableContent += '<tr>';
+                    row.forEach(cell => {
+                        tableContent += `<td style="border: 1px solid black; padding: 5px;">${cell}</td>`;
+                    });
+                    tableContent += '</tr>';
+                });
+
+                tableContent += '</tbody></table>';
+
+                const infoWindow = new google.maps.InfoWindow({
+                    content: `<div class="${document.documentElement.classList.contains('dark') ? 'dark:bg-gray-700 dark:text-white' : 'bg-white text-black'}"><strong>${location}</strong><br>${tableContent}</div>`
+                });
+
+                marker.addListener('click', function() {
+                    infoWindow.open(map, marker);
+                });
+            }
+        });
+    });
+}
+
 
         // Function to geocode an address and add a marker at the location
         function geocodeAddress(address, callback) {
