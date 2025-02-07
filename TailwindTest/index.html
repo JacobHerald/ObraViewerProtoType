@@ -124,7 +124,7 @@ Many, many features can and will be implemented to create a robust, powerful dat
             });
             geocoder = new google.maps.Geocoder();
 
-            fetch('output.csv')
+            fetch('/public/output.csv')
                 .then(response => response.text())
                 .then(data => {
                     const parsedData = Papa.parse(data, {
